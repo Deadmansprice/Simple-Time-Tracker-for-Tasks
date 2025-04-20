@@ -46,13 +46,35 @@
         <div class="task-list" id="task-list">
             {% for task in tasks %}
             <div class="task-item" id="task-{{ task.id }}">
-                <span><strong>{{ task.name }}</strong> - {{ task.priority }} {% if task.category %}- {{ task.category }}{% endif %} - <span id="time-{{ task.id }}">0 seconds</span></span>
-                <div class="button-container">
-                    <button onclick="startTimer({{ task.id }})">Start</button>
-                    <button onclick="stopTimer({{ task.id }})">Stop</button>
-                    <button onclick="resetTimer({{ task.id }})">Reset</button>
-                    <button onclick="exportCSV()">Export to CSV</button>
+                <div class="task-content">
+                    <span class="task-details">
+                        <strong>{{ task.name }}</strong> - {{ task.priority }} {% if task.category %}- {{ task.category }}{% endif %} - <span id="time-{{ task.id }}" data-total-time="{{ task.total_time | default(0) }}"></span>
+                        <span class="task-notes" data-task-id="{{ task.id }}">
+                            {% if task.notes %}
+                            - Notes: <span class="notes-content">{{ task.notes }}</span>
+                            {% endif %}
+                        </span>
+                    </span>
+                    <div class="task-actions">
+                        <button onclick="startTimer({{ task.id }})">Start</button>
+                        <button onclick="stopTimer({{ task.id }})">Stop</button>
+                        <button onclick="resetTimer({{ task.id }})">Reset</button>
+                        <button onclick="toggleEditForm({{ task.id }})">Edit</button>
+                        <button onclick="exportCSV()">Export to CSV</button>
+                    </div>
                 </div>
+                <form class="edit-form" id="edit-form-{{ task.id }}" method="POST" action="/edit_task/{{ task.id }}" style="display: none;">
+                    <input type="text" name="name" value="{{ task.name }}" required>
+                    <select name="priority">
+                        <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                    </select>
+                    <input type="text" name="category" value="{{ task.category }}" list="category-list">
+                    <input type="text" name="notes" value="{{ task.notes }}">
+                    <button type="submit">Save</button>
+                    <button type="button" onclick="toggleEditForm({{ task.id }})">Cancel</button>
+                </form>
             </div>
             {% endfor %}
         </div>
@@ -66,6 +88,11 @@
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
             </select>
+            <label for="notes-display">Notes Display:</label>
+            <select id="notes-display" onchange="changeNotesDisplay(this.value)">
+                <option value="show">Show Notes</option>
+                <option value="hide">Hide Notes</option>
+            </select>
             <button onclick="toggleSettings()">Close</button>
         </div>
     </div>
@@ -73,82 +100,94 @@
     <script>
         let activeTimers = {};
 
-        // Format time in seconds to a detailed string
+        // Format time in seconds to a readable string
         function formatTime(seconds) {
+            seconds = Math.floor(seconds);
+            if (seconds === 0) return '0s';
             let timeStr = '';
-            if (seconds >= 86400) {
-                const days = Math.floor(seconds / 86400);
-                timeStr += `${days} day${days !== 1 ? 's' : ''} `;
-                seconds %= 86400;
-            }
             if (seconds >= 3600) {
                 const hours = Math.floor(seconds / 3600);
-                timeStr += `${hours} hour${hours !== 1 ? 's' : ''} `;
+                timeStr += `${hours}h `;
                 seconds %= 3600;
             }
             if (seconds >= 60) {
                 const minutes = Math.floor(seconds / 60);
-                timeStr += `${minutes} minute${minutes !== 1 ? 's' : ''} `;
+                timeStr += `${minutes}m `;
                 seconds %= 60;
             }
-            if (seconds > 0 || timeStr === '') {
-                timeStr += `${seconds} second${seconds !== 1 ? 's' : ''}`;
-            }
+            timeStr += `${seconds}s`;
             return timeStr.trim();
         }
 
-        // Load theme from localStorage
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.body.setAttribute('data-theme', savedTheme);
-        document.getElementById('theme').value = savedTheme;
+        // Initialize display for all timers on page load
+        function initializeTimerDisplay(taskId) {
+            const timeElement = document.getElementById(`time-${taskId}`);
+            const totalTime = parseFloat(timeElement.getAttribute('data-total-time')) || 0;
+            timeElement.innerText = formatTime(totalTime);
+        }
 
-        // Fetch and set timer for a task
-        function fetchAndSetTimer(taskId) {
+        // Fetch and update timer display
+        function updateTimer(taskId) {
             fetch(`/get_timer/${taskId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log(`Timer data for task ${taskId}:`, data);
                     const timeElement = document.getElementById(`time-${taskId}`);
-                    if (data.active_start_time) {
-                        const startTime = new Date(data.active_start_time);
-                        const updateDisplay = () => {
-                            const now = new Date();
-                            const elapsed = Math.floor((now - startTime) / 1000);
-                            const totalTime = data.total_completed_time + elapsed;
-                            timeElement.innerText = formatTime(totalTime);
-                        };
-                        updateDisplay();
-                        activeTimers[taskId] = setInterval(updateDisplay, 1000);
-                    } else {
-                        timeElement.innerText = formatTime(data.total_completed_time);
-                    }
-                });
+                    timeElement.innerText = formatTime(data.total_time || 0);
+                })
+                .catch(error => console.error(`Error fetching timer for task ${taskId}:`, error));
         }
 
         // Start timer
         function startTimer(taskId) {
-            fetch(`/start_timer/${taskId}`)
-                .then(response => response.json())
+            console.log(`Starting timer for task ${taskId}`);
+            fetch(`/start_timer/${taskId}`, { method: 'GET' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
                 .then(data => {
-                    fetchAndSetTimer(taskId);
-                });
+                    console.log(`Session started for task ${taskId}:`, data);
+                    if (activeTimers[taskId]) {
+                        clearInterval(activeTimers[taskId]);
+                    }
+                    updateTimer(taskId);
+                    activeTimers[taskId] = setInterval(() => updateTimer(taskId), 1000);
+                })
+                .catch(error => console.error(`Error starting timer for task ${taskId}:`, error));
         }
 
         // Stop timer
         function stopTimer(taskId) {
+            console.log(`Stopping timer for task ${taskId}`);
             if (activeTimers[taskId]) {
                 clearInterval(activeTimers[taskId]);
                 delete activeTimers[taskId];
             }
-            fetch(`/stop_timer/${taskId}`)
-                .then(() => fetchAndSetTimer(taskId));
+            fetch(`/stop_timer/${taskId}`, { method: 'GET' })
+                .then(() => updateTimer(taskId))
+                .catch(error => console.error(`Error stopping timer for task ${taskId}:`, error));
         }
 
-        // Reset timer (client-side only)
+        // Reset timer
         function resetTimer(taskId) {
-            stopTimer(taskId);
-            const timeElement = document.getElementById(`time-${taskId}`);
-            timeElement.innerText = '0 seconds';
-            // Note: This does not reset the server-side total time
+            console.log(`Resetting timer for task ${taskId}`);
+            if (activeTimers[taskId]) {
+                clearInterval(activeTimers[taskId]);
+                delete activeTimers[taskId];
+            }
+            fetch(`/reset_timer/${taskId}`, { method: 'GET' })
+                .then(() => updateTimer(taskId))
+                .catch(error => console.error(`Error resetting timer for task ${taskId}:`, error));
+        }
+
+        // Toggle edit form visibility
+        function toggleEditForm(taskId) {
+            const form = document.getElementById(`edit-form-${taskId}`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
         }
 
         function exportCSV() {
@@ -165,13 +204,32 @@
             localStorage.setItem('theme', theme);
         }
 
+        function changeNotesDisplay(mode) {
+            localStorage.setItem('notesDisplay', mode);
+            applyNotesDisplay();
+        }
+
+        function applyNotesDisplay() {
+            const mode = localStorage.getItem('notesDisplay') || 'show';
+            const notesElements = document.querySelectorAll('.task-notes');
+            notesElements.forEach(element => {
+                element.style.display = mode === 'show' ? 'inline' : 'none';
+            });
+            document.getElementById('notes-display').value = mode;
+        }
+
         function applyFilters() {
             // Filter logic can be implemented here if needed
         }
 
+        // Initialize timers and settings on page load
         document.addEventListener('DOMContentLoaded', () => {
             const taskIds = [{% for task in tasks %}{{ task.id }},{% endfor %}];
-            taskIds.forEach(taskId => fetchAndSetTimer(taskId));
+            taskIds.forEach(taskId => {
+                initializeTimerDisplay(taskId);
+                updateTimer(taskId);
+            });
+            applyNotesDisplay();
         });
     </script>
 </body>

@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 from datetime import datetime
 from models import Task, Session
 
@@ -9,7 +9,6 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    # Create tables if they don't exist
     conn.execute('''CREATE TABLE IF NOT EXISTS tasks
                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
                      name TEXT NOT NULL,
@@ -22,13 +21,10 @@ def init_db():
                      start_time TEXT,
                      end_time TEXT,
                      FOREIGN KEY(task_id) REFERENCES tasks(id))''')
-    
-    # Check if 'category' column exists in tasks table, and add it if not
     cursor = conn.execute("PRAGMA table_info(tasks)")
     columns = [col[1] for col in cursor.fetchall()]
     if 'category' not in columns:
         conn.execute('ALTER TABLE tasks ADD COLUMN category TEXT')
-    
     conn.commit()
     conn.close()
 
@@ -102,4 +98,11 @@ def stop_active_session(task_id):
         end_time = datetime.now().isoformat()
         conn.execute('UPDATE sessions SET end_time = ? WHERE id = ?', (end_time, session_id))
         conn.commit()
+    conn.close()
+
+def reset_task_time(task_id):
+    conn = get_db_connection()
+    conn.execute('UPDATE tasks SET total_time = 0 WHERE id = ?', (task_id,))
+    conn.execute('DELETE FROM sessions WHERE task_id = ?', (task_id,))
+    conn.commit()
     conn.close()
