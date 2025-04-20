@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Time Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Time Tracker</h1>
+        <button class="settings-toggle" onclick="toggleSettings()">Settings</button>
+        <form class="task-input" method="POST" action="/add_task">
+            <input type="text" name="name" id="task-name" placeholder="Task Name" required>
+            <select name="priority" id="priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <input type="text" name="category" id="category" placeholder="Category" list="category-list" required>
+            <datalist id="category-list">
+                {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </datalist>
+            <input type="text" name="notes" id="notes" placeholder="Notes">
+            <button type="submit">Add Task</button>
+        </form>
+        <div class="filter-section">
+            <label for="category-filter">Filter by Category:</label>
+            <select id="category-filter">
+                <option value="">All</option>
+                {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+            <label for="priority-filter">Filter by Priority:</label>
+            <select id="priority-filter">
+                <option value="">All</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button onclick="applyFilters()">Apply Filters</button>
+        </div>
+        <div class="task-list" id="task-list">
+            {% for task in tasks %}
+            <div class="task-item" id="task-{{ task.id }}">
+                <span><strong>{{ task.name }}</strong> - {{ task.priority }} {% if task.category %}- {{ task.category }}{% endif %} - <span id="time-{{ task.id }}">0 seconds</span></span>
+                <div class="button-container">
+                    <button onclick="startTimer({{ task.id }})">Start</button>
+                    <button onclick="stopTimer({{ task.id }})">Stop</button>
+                    <button onclick="resetTimer({{ task.id }})">Reset</button>
+                    <button onclick="exportCSV()">Export to CSV</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-content">
+            <h2>Settings</h2>
+            <label for="theme">Theme:</label>
+            <select id="theme" onchange="changeTheme(this.value)">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+            </select>
+            <button onclick="toggleSettings()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let activeTimers = {};
+
+        // Format time in seconds to a detailed string
+        function formatTime(seconds) {
+            let timeStr = '';
+            if (seconds >= 86400) {
+                const days = Math.floor(seconds / 86400);
+                timeStr += `${days} day${days !== 1 ? 's' : ''} `;
+                seconds %= 86400;
+            }
+            if (seconds >= 3600) {
+                const hours = Math.floor(seconds / 3600);
+                timeStr += `${hours} hour${hours !== 1 ? 's' : ''} `;
+                seconds %= 3600;
+            }
+            if (seconds >= 60) {
+                const minutes = Math.floor(seconds / 60);
+                timeStr += `${minutes} minute${minutes !== 1 ? 's' : ''} `;
+                seconds %= 60;
+            }
+            if (seconds > 0 || timeStr === '') {
+                timeStr += `${seconds} second${seconds !== 1 ? 's' : ''}`;
+            }
+            return timeStr.trim();
+        }
+
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme').value = savedTheme;
+
+        // Fetch and set timer for a task
+        function fetchAndSetTimer(taskId) {
+            fetch(`/get_timer/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const timeElement = document.getElementById(`time-${taskId}`);
+                    if (data.active_start_time) {
+                        const startTime = new Date(data.active_start_time);
+                        const updateDisplay = () => {
+                            const now = new Date();
+                            const elapsed = Math.floor((now - startTime) / 1000);
+                            const totalTime = data.total_completed_time + elapsed;
+                            timeElement.innerText = formatTime(totalTime);
+                        };
+                        updateDisplay();
+                        activeTimers[taskId] = setInterval(updateDisplay, 1000);
+                    } else {
+                        timeElement.innerText = formatTime(data.total_completed_time);
+                    }
+                });
+        }
+
+        // Start timer
+        function startTimer(taskId) {
+            fetch(`/start_timer/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    fetchAndSetTimer(taskId);
+                });
+        }
+
+        // Stop timer
+        function stopTimer(taskId) {
+            if (activeTimers[taskId]) {
+                clearInterval(activeTimers[taskId]);
+                delete activeTimers[taskId];
+            }
+            fetch(`/stop_timer/${taskId}`)
+                .then(() => fetchAndSetTimer(taskId));
+        }
+
+        // Reset timer (client-side only)
+        function resetTimer(taskId) {
+            stopTimer(taskId);
+            const timeElement = document.getElementById(`time-${taskId}`);
+            timeElement.innerText = '0 seconds';
+            // Note: This does not reset the server-side total time
+        }
+
+        function exportCSV() {
+            window.location.href = '/export_csv';
+        }
+
+        function toggleSettings() {
+            const settingsOverlay = document.getElementById('settings-overlay');
+            settingsOverlay.style.display = settingsOverlay.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function changeTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        }
+
+        function applyFilters() {
+            // Filter logic can be implemented here if needed
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskIds = [{% for task in tasks %}{{ task.id }},{% endfor %}];
+            taskIds.forEach(taskId => fetchAndSetTimer(taskId));
+        });
+    </script>
+</body>
+</html>
