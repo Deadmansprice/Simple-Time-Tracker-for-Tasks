@@ -68,9 +68,9 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-    background-color: var(--button-hover);
-}
+    button:hover {
+        background-color: var(--button-hover);
+    }
 
 .task-list .task-item {
     background: var(--card-bg);
@@ -78,9 +78,45 @@ button:hover {
     margin-bottom: 10px;
     border-radius: 10px;
     box-shadow: var(--shadow);
+}
+
+.task-content {
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
+
+.task-details {
+    flex: 1;
+    text-align: left;
+}
+
+.task-actions {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.task-notes {
+    position: relative;
+}
+
+.edit-form {
+    background: var(--card-bg);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+    .edit-form input, .edit-form select {
+        background-color: var(--input-bg);
+        color: var(--input-text);
+        border: 1px solid var(--accent-color);
+        padding: 8px;
+        border-radius: 5px;
+    }
 
 .settings-overlay {
     display: none;
@@ -121,28 +157,14 @@ button:hover {
         padding: 1rem;
         flex-direction: column;
     }
-}
 
-.task-item {
-    background: var(--card-bg);
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+    .task-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-.button-group {
-    display: flex;
-    gap: 0; /* Remove spacing between Start, Stop, Reset */
-}
-
-.button-group button {
-    margin: 0; /* Ensure no extra margin */
-}
-
-.button-group button:not(:last-child) {
-    border-right: none; /* Optional: Remove border between buttons for a seamless look */
+    .task-actions {
+        margin-top: 10px;
+        margin-left: 0;
+    }
 }
