@@ -1,50 +1,63 @@
-# Simple Time Tracker for Tasks
+# Simple Time Tracker
 
-A minimalistic time tracking application built with Python and Tkinter. This application allows you to create, manage, and track the time spent on tasks, with data persistence using a local JSON file.
+## Overview
+
+Simple Time Tracker is a web-based application designed to help users manage and track the time spent on various tasks. Built with Flask, SQLite, HTML, CSS, and JavaScript, it offers a responsive interface that works on both desktop and mobile devices. The app supports task creation, time tracking, categorization, and CSV export, with a focus on user-friendly features like theme switching and task filtering.
 
 ## Features
 
-- **Add Tasks**: Create new tasks by clicking the "Add Task" button on the left side and entering a task name.
-- **Edit Tasks**: Rename existing tasks by double-clicking on them in the list.
-- **Delete Tasks**: Remove tasks by selecting a task and clicking the "Delete Task" button (note: you cannot delete a task that is currently being timed).
-- **Track Time**: Start and stop a timer for a task by selecting it and clicking "Start Timer" (which toggles to "Stop Timer" while active).
-- **Automatic Save**: Tasks and their total times are automatically saved to a `time_tracker_data.json` file when you close the application window.
-- **Load on Launch**: On re-launch, the application loads existing tasks from the `time_tracker_data.json` file, if it exists.
-- **Local Data Storage**: All data is stored locally in a human-readable JSON file, which you can review externally.
+- **Task Management**: Add, delete, and track tasks with details like name, priority, category, and notes.
+- **Time Tracking**: Start, stop, and reset timers for each task, with time displayed in a detailed format (e.g., "1 minute 30 seconds").
+- **Categories**: Assign categories to tasks, with a dropdown menu that auto-populates existing categories for reuse.
+- **Filtering**: Filter tasks by category or priority for better organization.
+- **Theme Toggle**: Switch between dark and light themes, with preferences saved in `localStorage`.
+- **CSV Export**: Export task data (name, priority, category, notes, total time) to a CSV file.
+- **Responsive Design**: Adapts to different screen sizes, ensuring usability on mobile and desktop.
 
-## Requirements
+## Installation
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/yourusername/simple-time-tracker.git
+   cd simple-time-tracker
+   ```
 
-- Python 3.12 or higher
-- Tkinter (usually included with Python; if not, install it via your package manager, e.g., `sudo apt-get install python3-tk` on Linux)
+2. Set Up a Virtual Environment (optional but recommended)
 
-## How to Run
+   ```bash
+	python -m venv venv
+	source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+ 
+3. Install Dependencies:
+   ```bash
+	pip install flask
+   ```
+4. Initialize the Database:
+ - The database (tasks.db) is automatically created when you run the app for the first time.
 
-1. Clone the repository:
-git clone https://github.com/your-username/Simple-Time-Tracker-for-Tasks.git
-cd Simple-Time-Tracker-for-Tasks
+ 5. Run the Application:
+	```bash
+	python app.py
+   ```
+ - Open your browser and navigate to http://127.0.0.1:5000.
 
-2. Navigate to the `Source` directory:
+## Usage
+1. Add a Task:
+ - Enter a task name, select a priority (low, medium, high), choose or type a category, and add optional notes.
+ - Click "Add Task" to save it.
 
-3. Run the application:
-python gui.py
+2. Track Time:
+ - Use the "Start" button to begin tracking time for a task.
+ - Click "Stop" to pause the timer, and "Reset" to set the displayed time back to 0 (note: reset is currently client-side only).
+ - Time is displayed in a detailed format (e.g., "1 minute 30 seconds").
 
-Alternatively, you can open the project in Visual Studio and run `main.py`.
+3. Filter Tasks:
+ - Use the dropdown menus to filter tasks by category or priority.
+ - Click "Apply Filters" to update the task list (filter logic implementation pending).
 
-## Project Structure
+4. Export Data:
+ - Click "Export to CSV" on any task to download a CSV file containing all tasks (currently saves to the server; download functionality pending).
 
-- `Source/`: Contains the main application files.
-- `gui.py`: The main GUI implementation using Tkinter.
-- `main.py`: Entry point to run the application.
-- `task.py`: Defines the `Task` class for managing task data.
-- `time_tracker.py`: Manages task logic and timer functionality.
-- `utils.py`: Utility functions, such as time formatting.
-- `time_tracker_data.json`: Automatically generated file that stores task data (not tracked by Git).
-
-## Notes
-
-- This is a Minimum Viable Product (MVP) with basic functionality. Future improvements could include enhanced UI styling, additional features like task categories, or more robust error handling.
-- The application is designed to be simple and lightweight, with all data stored locally in a JSON file for easy review.
-
-## License
-
-This project is open-source and available under the [MIT License](LICENSE).
+5. Switch Themes:
+ - Click the "Settings" button in the top-right corner.
+ - Select "Dark" or "Light" theme from the dropdown.
