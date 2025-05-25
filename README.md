@@ -4,6 +4,8 @@
 
 Simple Time Tracker is a web-based application designed to help users manage and track the time spent on various tasks. Built with Flask, SQLite, HTML, CSS, and JavaScript, it offers a responsive interface that works on both desktop and mobile devices. The app supports task creation, time tracking, categorization, and CSV export, with a focus on user-friendly features like theme switching and task filtering.
 
+![Time Tracker example](images/Simple_Time_Tracker_front.png)
+
 ## Features
 
 - **Task Management**: Add, delete, and track tasks with details like name, priority, category, and notes.
